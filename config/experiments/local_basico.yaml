@@ -1,0 +1,9 @@
+# Experimento básico com fonte local.
+data_source:
+  type: "local"
+
+training:
+  n_runs: 100
+  n_threads: 2
+  runs_per_round: 2
+  top_k: 20

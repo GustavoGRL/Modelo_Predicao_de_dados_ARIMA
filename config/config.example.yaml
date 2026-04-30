@@ -1,0 +1,82 @@
+# ===================================================================
+# EXEMPLO DE CONFIGURAÇÃO (seguro para versionar)
+# Copie este arquivo para config.yami ou config.yaml e ajuste os valores.
+# ===================================================================
+
+project:
+  name: "modelo_predicao_arima"
+  description: "Treinamento ARIMA para tendências"
+  version: "1.0.0"
+
+data_source:
+  # Valores aceitos: "local", "api", "google_trends"
+  type: "local"
+
+local_data:
+  path: "data/input/pedicure_trends.csv"
+  # Valores aceitos: "csv", "xlsx", "json"
+  file_type: "csv"
+  delimiter: ","
+  skiprows: 1
+
+api_data:
+  url: "https://api.exemplo.com/dados"
+  # Valores aceitos: "GET", "POST"
+  method: "GET"
+  timeout_seconds: 30
+  # Valores aceitos: "csv", "json"
+  response_format: "csv"
+  delimiter: ","
+  token_env: "API_TOKEN"
+  auth_header_name: "Authorization"
+  auth_use_bearer: true
+
+google_trends:
+  # Máximo recomendado: 5 termos
+  keywords:
+    - "pedicure"
+  timeframe: "today 5-y"
+  geo: "BR"
+  hl: "pt-BR"
+  tz: 360
+  # "", "images", "news", "youtube", "froogle"
+  gprop: ""
+
+processing:
+  remove_duplicates: true
+  # Valores aceitos: "remove", "fill_zero", "keep"
+  missing_values_strategy: "remove"
+  normalize_column_names: true
+
+data:
+  trends:
+    - pedicure
+
+split:
+  train_end: "2022-10-30 00:00:00"
+  eval_start: "2022-10-30 00:00:00"
+  eval_end: "2023-03-12 00:00:00"
+
+training:
+  n_threads: 4
+  n_runs: 500
+  runs_per_round: 4
+  top_k: 30
+  max_trends_simultaneas: 1
+  mostrar_graficos: true
+  random_seed: 42
+
+model:
+  type: "arima"
+  p_range: [0, 30]
+  q_range: [0, 30]
+  d_range: [0, 2]
+  max_retries: 40
+
+test:
+  fixed_order: [18, 2, 18]
+
+output:
+  path: "output"
+  resultados_txt: "output/resultados_treinamento.txt"
+  save_report: true

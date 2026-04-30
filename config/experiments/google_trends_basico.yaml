@@ -1,0 +1,18 @@
+# Experimento usando Google Trends via pytrends.
+data_source:
+  type: "google_trends"
+
+google_trends:
+  keywords:
+    - "pedicure"
+  timeframe: "today 5-y"
+  geo: "BR"
+  hl: "pt-BR"
+  tz: 360
+  gprop: ""
+
+training:
+  n_runs: 200
+  n_threads: 4
+  runs_per_round: 4
+  top_k: 30

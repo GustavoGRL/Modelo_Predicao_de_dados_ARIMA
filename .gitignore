@@ -1,0 +1,21 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.pytest_cache/
+
+# Ambiente local
+.env
+.venv/
+venv/
+
+# Configurações locais sensíveis
+config/config.yaml
+
+# Saídas de execução
+output/resultados_treinamento.txt
+output/*.txt
+
+# IDE
+.idea/
