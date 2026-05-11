@@ -14,8 +14,7 @@ venv/
 config/config.yaml
 
 # Saídas de execução
-output/resultados_treinamento.txt
-output/*.txt
+output/
 
 # IDE
 .idea/

@@ -1,178 +1,148 @@
-# Documentação de Configuração
+# Documentação De Configuração
+Este documento descreve os campos efetivamente usados pelo projeto no arquivo `config/config.yami`.
 
-Este documento descreve os campos do arquivo `config/config.yami`.
+## Arquivo Base
+Use este arquivo como referência principal:
 
-## Ordem de carregamento
+- `config/config.yami`
 
-1. Configuração base (`config/config.yami`)
-2. Override opcional de experimento (`config/experiments/*.yaml`)
-3. Variáveis de ambiente (ex.: token da API)
+O sistema atual utiliza somente fonte local de dados (`fonte_dados.tipo: local`).
 
-## data_source.type
-
-Descrição:
-Define a origem dos dados.
-
-Tipo:
-`string`
-
-Obrigatório:
-Sim
-
-Valores aceitos:
-- `local`
-- `api`
-- `google_trends`
-
-Exemplo:
-
+## Exemplo Completo
 ```yaml
-data_source:
-  type: "local"
+projeto:
+  nome: "modelo_predicao_arima"
+  descricao: "Treinamento ARIMA para análise de tendências"
+  versao: "2.0.0"
+
+execucao:
+  modo: "treino"
+  iniciar_dashboard_automaticamente: true
+
+dashboard:
+  porta: 8004
+  caminho_estado: "output/estado_treinamento.json"
+  caminho_historico: "output/histórico_rodadas.csv"
+
+fonte_dados:
+  tipo: "local"
+
+dados_locais:
+  caminho: "data/input/pedicure_trends.csv"
+  tipo_arquivo: "csv"
+  coluna_tempo: "Time"
+  delimitador: ","
+  pular_linhas: 0
+
+processamento:
+  remover_duplicados: true
+  estrategia_valores_faltantes: "remove"
+  normalizar_nomes_colunas: true
+
+dados:
+  tendencias:
+    - pedicure
+
+divisao:
+  fim_treino: "2025-09-01 00:00:00"
+  inicio_avaliacao: "2025-10-01 00:00:00"
+  fim_avaliacao: "2026-03-01 00:00:00"
+
+treinamento:
+  n_execucoes: 1000
+  execucoes_por_rodada: 7
+  top_k: 30
+  mostrar_graficos: false
+  semente_aleatoria: null
+
+modelo:
+  tipo: "arima"
+  intervalo_p: [0, 30]
+  intervalo_d: [0, 2]
+  intervalo_q: [0, 30]
+  max_tentativas: 40
+
+teste:
+  ordem_fixa: [18, 2, 18]
+
+saida:
+  pasta: "output"
+  arquivo_resultados: "output/resultados_treinamento.txt"
+  salvar_relatorio: true
 ```
 
-## local_data.path
+## Blocos Do YAML
+## `projeto`
+- `nome`: nome do projeto.
+- `descricao`: descrição curta do objetivo.
+- `versao`: versão do projeto/configuração.
 
-Descrição:
-Caminho do arquivo quando `data_source.type = "local"`.
+## `execucao`
+- `modo`: `treino` ou `teste`.
+- `iniciar_dashboard_automaticamente`: abre o dashboard ao iniciar o processo.
 
-Tipo:
-`string`
+## `dashboard`
+- `porta`: porta HTTP do painel.
+- `caminho_estado`: JSON lido pelo dashboard.
+- `caminho_historico`: CSV com evolução por rodada.
 
-Obrigatório:
-Sim quando `data_source.type = "local"`.
+## `fonte_dados`
+- `tipo`: deve ser `local`.
 
-Exemplo:
+## `dados_locais`
+- `caminho`: caminho do CSV relativo ao projeto.
+- `tipo_arquivo`: deve ser `csv`.
+- `coluna_tempo`: coluna temporal original (ex.: `Time`).
+- `delimitador`: separador do CSV.
+- `pular_linhas`: linhas de cabeçalho extras para ignorar.
 
-```yaml
-local_data:
-  path: "data/input/pedicure_trends.csv"
-```
+Requisitos mínimos do arquivo:
+- 1 coluna temporal;
+- 1 ou mais colunas numéricas para previsão.
 
-## api_data.url
+## `processamento`
+- `remover_duplicados`: remove datas repetidas no índice temporal.
+- `estrategia_valores_faltantes`: `remove`, `fill_zero` ou `keep`.
+- `normalizar_nomes_colunas`: padroniza nomes (minúsculas e `_`).
 
-Descrição:
-Endpoint para busca de dados por requisição HTTP.
+## `dados`
+- `tendencias`: colunas que serão treinadas.
 
-Tipo:
-`string`
+Se não informar, o sistema tenta usar todas as colunas de valor disponíveis.
 
-Obrigatório:
-Sim quando `data_source.type = "api"`.
+## `divisao`
+- `fim_treino`: data final da janela de treino.
+- `inicio_avaliacao`: início da janela de avaliação.
+- `fim_avaliacao`: fim da janela de avaliação.
 
-Exemplo:
+Treino e avaliação precisam resultar em séries não vazias.
 
-```yaml
-api_data:
-  url: "https://api.exemplo.com/dados"
-```
+## `treinamento`
+- `n_execucoes`: total de simulações testadas.
+- `execucoes_por_rodada`: quantidade executada em paralelo em cada rodada.
+- `top_k`: quantidade de melhores modelos mantidos.
+- `mostrar_graficos`: campo de compatibilidade.
+- `semente_aleatoria`: reprodutibilidade (`null` desativa).
 
-## google_trends.keywords
+## `modelo`
+- `tipo`: modelo utilizado (`arima`).
+- `intervalo_p`, `intervalo_d`, `intervalo_q`: espaço de busca dos parâmetros.
+- `max_tentativas`: limite de tentativas internas para ajustar um modelo válido.
 
-Descrição:
-Lista de termos para consulta no Google Trends via `pytrends`.
+## `teste`
+- `ordem_fixa`: ordem ARIMA usada quando `execucao.modo = teste`.
 
-Tipo:
-`list[string]`
+## `saida`
+- `pasta`: pasta base de saída.
+- `arquivo_resultados`: arquivo texto final com ranking.
+- `salvar_relatorio`: habilita/desabilita o relatório final.
 
-Obrigatório:
-Sim quando `data_source.type = "google_trends"`.
 
-Valores aceitos:
-De 1 até 5 termos.
+## Modo Teste Com Ordem Fixa
+Para validar um ARIMA específico:
 
-Exemplo:
+1. defina `execucao.modo: "teste"`;
+2. configure `teste.ordem_fixa`, por exemplo `[2, 1, 2]`;
+3. execute `python scripts/iniciar_pesquisa.py`.
 
-```yaml
-google_trends:
-  keywords:
-    - "pedicure"
-```
-
-## google_trends.hl / google_trends.tz / google_trends.geo / google_trends.gprop
-
-Descrição:
-Parâmetros da consulta Trends.
-
-Observações:
-- Use `hl: "pt-BR"` (país em maiúsculo).
-- `tz` em minutos (ex.: `360`).
-- `geo: "BR"` para Brasil ou `""` para global.
-- `gprop`: `""`, `images`, `news`, `youtube`, `froogle`.
-
-## training.n_threads
-
-Descrição:
-Quantidade de threads/processos para execução.
-
-Tipo:
-`integer`
-
-Obrigatório:
-Não
-
-Valor padrão:
-`4`
-
-Valores aceitos:
-Inteiro `>= 1`
-
-Observações:
-Valores altos podem reduzir o tempo de execução, mas aumentam consumo de CPU.
-
-## training.n_runs
-
-Descrição:
-Número total de execuções/tentativas do modelo.
-
-Tipo:
-`integer`
-
-Obrigatório:
-Não
-
-Valor padrão:
-`500`
-
-Valores aceitos:
-Inteiro `>= 1`
-
-## model.p_range / model.d_range / model.q_range
-
-Descrição:
-Intervalos para geração aleatória dos parâmetros do ARIMA.
-
-Tipo:
-`list[2]`
-
-Exemplo:
-
-```yaml
-model:
-  p_range: [0, 30]
-  d_range: [0, 2]
-  q_range: [0, 30]
-```
-
-## output.resultados_txt
-
-Descrição:
-Arquivo de saída com ranking dos melhores resultados.
-
-Tipo:
-`string`
-
-Exemplo:
-
-```yaml
-output:
-  resultados_txt: "output/resultados_treinamento.txt"
-```
-
-## Boas práticas adotadas
-
-- Campos agrupados por responsabilidade (`data_source`, `training`, `model`, `output`).
-- Valores aceitos descritos no YAML e aqui.
-- Segredos fora do YAML (`token_env` + variável de ambiente).
-- Arquivo de exemplo versionável (`config/config.example.yaml`).
-- Configurações de experimento separadas (`config/experiments/`).
+Nesse modo, o sistema executa uma simulação por tendência usando exatamente a ordem informada.

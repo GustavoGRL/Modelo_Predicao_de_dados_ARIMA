@@ -1,82 +1,79 @@
 # ===================================================================
-# EXEMPLO DE CONFIGURAÇÃO (seguro para versionar)
-# Copie este arquivo para config.yami ou config.yaml e ajuste os valores.
+# Configuração principal do projeto ARIMA
 # ===================================================================
 
-project:
-  name: "modelo_predicao_arima"
-  description: "Treinamento ARIMA para tendências"
-  version: "1.0.0"
+projeto:
+  nome: "modelo_predicao_arima"
+  descricao: "Treinamento ARIMA para análise de tendências"
+  versao: "2.0.0"
 
-data_source:
-  # Valores aceitos: "local", "api", "google_trends"
-  type: "local"
+execucao:
+  # Valores aceitos: "treino", "teste"
+  modo: "treino"
+  iniciar_dashboard_automaticamente: true
 
-local_data:
-  path: "data/input/pedicure_trends.csv"
-  # Valores aceitos: "csv", "xlsx", "json"
-  file_type: "csv"
-  delimiter: ","
-  skiprows: 1
+dashboard:
+  porta: 8004
+  caminho_estado: "output/estado_treinamento.json"
+  caminho_historico: "output/histórico_rodadas.csv"
 
-api_data:
-  url: "https://api.exemplo.com/dados"
-  # Valores aceitos: "GET", "POST"
-  method: "GET"
-  timeout_seconds: 30
-  # Valores aceitos: "csv", "json"
-  response_format: "csv"
-  delimiter: ","
-  token_env: "API_TOKEN"
-  auth_header_name: "Authorization"
-  auth_use_bearer: true
+fonte_dados:
+  # Fonte única de dados: arquivo local fornecido pelo usuário.
+  # Valor aceito: "local"
+  tipo: "local"
 
-google_trends:
-  # Máximo recomendado: 5 termos
-  keywords:
-    - "pedicure"
-  timeframe: "today 5-y"
-  geo: "BR"
-  hl: "pt-BR"
-  tz: 360
-  # "", "images", "news", "youtube", "froogle"
-  gprop: ""
+dados_locais:
+  # Caminho relativo ao projeto para arquivo local.
+  caminho: "data/input/pedicure_trends.csv"
+  # O sistema aceita apenas CSV.
+  tipo_arquivo: "csv"
+  # Nome da coluna temporal no arquivo (ex.: "Time", "Semana", "Date").
+  coluna_tempo: "Time"
+  # O arquivo deve ter ao menos:
+  # 1 coluna temporal + 1 coluna de dados para predição.
+  delimitador: ","
+  pular_linhas: 0
 
-processing:
-  remove_duplicates: true
+processamento:
+  remover_duplicados: true
   # Valores aceitos: "remove", "fill_zero", "keep"
-  missing_values_strategy: "remove"
-  normalize_column_names: true
+  estrategia_valores_faltantes: "remove"
+  # Se true, normaliza nomes de colunas (ex.: "pedicure: (Brasil)" -> "pedicure")
+  normalizar_nomes_colunas: true
 
-data:
-  trends:
+dados:
+  # Tendências/colunas utilizadas no treinamento.
+  tendencias:
     - pedicure
 
-split:
-  train_end: "2022-10-30 00:00:00"
-  eval_start: "2022-10-30 00:00:00"
-  eval_end: "2023-03-12 00:00:00"
+divisao:
+  fim_treino: "2025-09-01 00:00:00"
+  inicio_avaliacao: "2025-10-01 00:00:00"
+  fim_avaliacao: "2026-03-01 00:00:00"
 
-training:
-  n_threads: 4
-  n_runs: 500
-  runs_per_round: 4
+treinamento:
+  # Quantidade total de tentativas no modo treino
+  n_execucoes: 1000
+  # Quantas tentativas serão executadas em paralelo por rodada
+  execucoes_por_rodada: 7
+  # Quantos melhores resultados manter
   top_k: 30
-  max_trends_simultaneas: 1
-  mostrar_graficos: true
-  random_seed: 42
+  # Mantido por compatibilidade; a visualização acontece no Dash
+  mostrar_graficos: false
+  # Semente para reprodutibilidade (null desativa)
+  semente_aleatoria: null
 
-model:
-  type: "arima"
-  p_range: [0, 30]
-  q_range: [0, 30]
-  d_range: [0, 2]
-  max_retries: 40
+modelo:
+  tipo: "arima"
+  intervalo_p: [0, 30]
+  intervalo_q: [0, 30]
+  intervalo_d: [0, 2]
+  max_tentativas: 40
 
-test:
-  fixed_order: [18, 2, 18]
+teste:
+  ordem_fixa: [18, 2, 18]
 
-output:
-  path: "output"
-  resultados_txt: "output/resultados_treinamento.txt"
-  save_report: true
+saida:
+  pasta: "output"
+  arquivo_resultados: "output/resultados_treinamento.txt"
+  salvar_relatorio: true

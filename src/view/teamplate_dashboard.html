@@ -1,0 +1,436 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ARIMA Monitor Dashboard</title>
+  <style>
+    :root {
+      --bg: #101418;
+      --bg-2: #0f141b;
+      --surface: #1d2025;
+      --surface-2: #272a2f;
+      --border: #414751;
+      --text: #e0e2e9;
+      --text-2: #c0c7d3;
+      --primary: #4894e2;
+      --ok: #6de19b;
+      --warning: #ffe4a3;
+      --danger: #ffb3b3;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      font-family: Inter, Arial, sans-serif;
+      color: var(--text);
+      background: var(--bg);
+    }
+
+    .content {
+      min-height: 100vh;
+    }
+
+    .topbar {
+      position: sticky;
+      top: 0;
+      z-index: 10;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      min-height: 60px;
+      padding: 0 20px;
+      background: var(--bg-2);
+      border-bottom: 1px solid var(--border);
+    }
+
+    .topbar h1 {
+      margin: 0;
+      font-size: 22px;
+    }
+
+    .badge {
+      padding: 6px 10px;
+      font-size: 12px;
+      color: var(--ok);
+      background: #0d2a17;
+      border: 1px solid #1f6f45;
+      border-radius: 999px;
+    }
+
+    .badge.erro {
+      color: var(--danger);
+      background: #311313;
+      border-color: #7f2a2a;
+    }
+
+    .badge.aguardando {
+      color: var(--warning);
+      background: #2f2612;
+      border-color: #826326;
+    }
+
+    .main {
+      padding: 16px;
+    }
+
+    .section-heading {
+      margin: 18px 0 10px;
+      font-size: 20px;
+      font-weight: 600;
+    }
+
+    .metrics-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 12px;
+    }
+
+    .details-grid {
+      display: grid;
+      grid-template-columns: 34% 64%;
+      gap: 2%;
+      margin-top: 16px;
+    }
+
+    .charts-grid {
+      display: grid;
+      grid-template-columns: 65% 34%;
+      gap: 1%;
+      margin-top: 10px;
+    }
+
+    .card,
+    .chart-card,
+    .table-wrapper,
+    .logs {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+    }
+
+    .card {
+      padding: 12px;
+    }
+
+    .chart-card {
+      min-height: 260px;
+      padding: 6px;
+    }
+
+    .table-wrapper {
+      overflow: hidden;
+    }
+
+    .muted {
+      margin: 0 0 6px;
+      font-size: 12px;
+      color: var(--text-2);
+    }
+
+    .value {
+      margin: 0;
+      font-size: 24px;
+    }
+
+    .sub {
+      margin: 8px 0 0;
+      font-size: 12px;
+      color: var(--text-2);
+    }
+
+    .progress-wrap {
+      margin-top: 10px;
+    }
+
+    .progress-bg {
+      width: 100%;
+      height: 7px;
+      overflow: hidden;
+      background: var(--surface-2);
+      border-radius: 999px;
+    }
+
+    .progress-bar {
+      width: 0;
+      height: 100%;
+      background: var(--primary);
+    }
+
+    .diagnostico {
+      margin: 10px 0 0;
+      font-size: 12px;
+      color: var(--text-2);
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 14px;
+    }
+
+    th,
+    td {
+      padding: 10px;
+      text-align: left;
+      border-bottom: 1px solid var(--border);
+    }
+
+    th {
+      color: var(--text-2);
+      background: #182029;
+    }
+
+    .chart-inner {
+      min-height: 240px;
+    }
+
+    .chart-frame {
+      display: grid;
+      gap: 8px;
+      height: 100%;
+    }
+
+    .chart-title {
+      margin: 4px 6px 0;
+      font-size: 14px;
+      color: var(--text-2);
+    }
+
+    .chart-empty {
+      display: grid;
+      place-items: center;
+      min-height: 240px;
+      padding: 16px;
+      text-align: center;
+      color: var(--text-2);
+      background: #161b22;
+      border: 1px dashed #38404a;
+      border-radius: 8px;
+    }
+
+    .chart-svg {
+      display: block;
+      width: 100%;
+      height: 240px;
+      background: #161b22;
+      border-radius: 8px;
+    }
+
+    .chart-legend {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px 12px;
+      padding: 0 6px 4px;
+      font-size: 12px;
+      color: var(--text-2);
+    }
+
+    .chart-legend-item {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .chart-legend-swatch {
+      width: 12px;
+      height: 12px;
+      border-radius: 3px;
+      flex: 0 0 auto;
+    }
+
+    .chart-stack {
+      display: grid;
+      gap: 10px;
+      margin-top: 10px;
+    }
+
+    .panel-title {
+      margin: 0 0 12px;
+      font-size: 18px;
+    }
+
+    .section-title {
+      margin: 0 0 10px;
+      font-size: 14px;
+      color: var(--text-2);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .section-title--spaced {
+      margin-top: 12px;
+    }
+
+    .info-list {
+      display: grid;
+      gap: 8px;
+    }
+
+    .info-row {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      padding-bottom: 6px;
+      font-size: 13px;
+      border-bottom: 1px dashed #38404a;
+    }
+
+    .info-chave {
+      color: var(--text-2);
+    }
+
+    .info-valor {
+      color: var(--text);
+      font-weight: 600;
+      text-align: right;
+    }
+
+    .logs {
+      min-height: 150px;
+      padding: 12px;
+      white-space: pre-wrap;
+      background: #0b0e13;
+      color: #d8deea;
+      font-family: Consolas, monospace;
+      font-size: 12px;
+    }
+
+    @media (max-width: 1200px) {
+      .metrics-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+
+      .details-grid,
+      .charts-grid {
+        grid-template-columns: 1fr;
+        gap: 10px;
+      }
+    }
+
+    @media (max-width: 640px) {
+      .topbar {
+        flex-direction: column;
+        align-items: flex-start;
+        padding: 16px;
+      }
+
+      .metrics-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <section class="content">
+    <header class="topbar">
+      <h1>ARIMA Training Dashboard</h1>
+      <span id="status_badge" class="badge">System Online</span>
+    </header>
+
+    <main class="main">
+      <section class="metrics-grid" aria-label="Indicadores principais">
+        <article class="card">
+          <p class="muted">STATUS ATUAL</p>
+          <h2 id="status_valor" class="value">Aguardando</h2>
+          <p id="modo_valor" class="sub">Modo: -</p>
+        </article>
+
+        <article class="card">
+          <p class="muted">RODADA</p>
+          <h2 id="rodada_valor" class="value">0 / 0</h2>
+          <p id="execucoes_valor" class="sub">Testados: 0 / 0</p>
+        </article>
+
+        <article class="card">
+          <p class="muted">MELHOR TAXA DE ERRO</p>
+          <h2 id="melhor_erro_valor" class="value">-</h2>
+          <p class="sub">Menor é melhor</p>
+        </article>
+
+        <article class="card">
+          <p class="muted">MELHOR ARIMA</p>
+          <h2 id="melhor_arima_valor" class="value">-</h2>
+          <p id="tendencia_valor" class="sub">Tendência: -</p>
+        </article>
+
+        <article class="card">
+          <p class="muted">MAPE DO MELHOR MODELO</p>
+          <h2 id="mape_valor" class="value">-</h2>
+          <p class="sub">Erro percentual médio</p>
+        </article>
+      </section>
+
+      <section class="progress-wrap" aria-label="Progresso da execução">
+        <div class="progress-bg">
+          <div id="barra_progresso" class="progress-bar"></div>
+        </div>
+        <p id="texto_progresso" class="sub">Progresso geral: 0.00%</p>
+        <p id="fonte_estado" class="diagnostico">Origem do estado: aguardando...</p>
+      </section>
+
+      <section aria-labelledby="titulo-top5">
+        <h2 id="titulo-top5" class="section-heading">Top 5 melhores indivíduos</h2>
+        <div class="table-wrapper">
+          <table>
+            <thead>
+              <tr>
+                <th>Rank</th>
+                <th>Erro</th>
+                <th>MAPE</th>
+                <th>Modelo</th>
+                <th>Parâmetros</th>
+                <th>Observação</th>
+              </tr>
+            </thead>
+            <tbody id="top5_tbody"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="charts-grid" aria-label="Visualizações principais">
+        <div class="chart-card">
+          <div id="grafico_top5" class="chart-inner"></div>
+        </div>
+        <div class="chart-card">
+          <div id="grafico_evolucao" class="chart-inner"></div>
+        </div>
+      </section>
+
+      <section class="chart-stack" aria-label="Análises detalhadas">
+        <div class="chart-card">
+          <div id="grafico_melhor_inner" class="chart-inner"></div>
+        </div>
+        <div class="chart-card">
+          <div id="grafico_residuos_inner" class="chart-inner"></div>
+        </div>
+      </section>
+
+      <section class="details-grid" aria-label="Resumo e configuração">
+        <article class="card">
+          <h3 class="panel-title">Resumo da rodada</h3>
+          <div id="resumo_linhas" class="info-list"></div>
+        </article>
+
+        <article class="card">
+          <h3 class="panel-title">Configuração de execução</h3>
+          <div id="configuracao_linhas"></div>
+        </article>
+      </section>
+
+      <section aria-labelledby="titulo-logs">
+        <h2 id="titulo-logs" class="section-heading">Logs e alertas</h2>
+        <pre id="logs" class="logs">Aguardando arquivo de estado de treinamento...
+Arquivo padrão: output/estado_treinamento.json
+Histórico padrão: output/histórico_rodadas.csv</pre>
+      </section>
+    </main>
+  </section>
+  <script src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script>
+  <script src='/dashboard.js'></script>
+</body>
+</html>
