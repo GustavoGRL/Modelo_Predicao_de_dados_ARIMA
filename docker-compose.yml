@@ -1,0 +1,42 @@
+version: '3.8'
+
+services:
+  training-arima:
+    build: .
+    container_name: training-arima
+    command: python scripts/iniciar_pesquisa.py --sem-dashboard
+    volumes:
+      - ./output:/app/output
+      - ./config:/app/config
+      - ./data:/app/data
+    environment:
+      - PYTHONUNBUFFERED=1
+      - PYTHONDONTWRITEBYTECODE=1
+    restart: "no"
+    networks:
+      - arima-network
+
+  arima-dashboard:
+    build: .
+    container_name: arima-dashboard
+    command: python -m src.view.visualizador_dash
+    ports:
+      - "8004:8004"
+    volumes:
+      - ./output:/app/output
+      - ./config:/app/config
+    depends_on:
+      - training-arima
+    restart: unless-stopped
+    networks:
+      - arima-network
+    healthcheck:
+      test: ["CMD", "python", "-c", "import requests; requests.get('http://localhost:8004/api/health', timeout=2)"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+networks:
+  arima-network:
+    driver: bridge

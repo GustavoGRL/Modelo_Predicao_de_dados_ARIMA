@@ -18,8 +18,8 @@ dashboard:
   caminho_historico: "output/histórico_rodadas.csv"
 
 fonte_dados:
-  # Fonte única de dados: arquivo local fornecido pelo usuário.
-  # Valor aceito: "local"
+  # Fonte de dados para treinamento.
+  # Valores aceitos: "local" (arquivo CSV local), "binance" (API da Binance)
   tipo: "local"
 
 dados_locais:
@@ -34,6 +34,17 @@ dados_locais:
   delimitador: ","
   pular_linhas: 0
 
+dados_binance:
+  # Configuração para buscar dados da API da Binance.
+  # Par de moedas (ex.: "BTCUSDT", "ETHUSDT")
+  symbol: "BTCUSDT"
+  # Intervalo de tempo dos candles (ex.: "1h", "4h", "1d")
+  interval: "1h"
+  # Quantidade de candles a buscar (máximo 1000)
+  limit: 720
+  # Timeout da requisição em segundos
+  timeout: 15
+
 processamento:
   remover_duplicados: true
   # Valores aceitos: "remove", "fill_zero", "keep"
@@ -47,9 +58,9 @@ dados:
     - pedicure
 
 divisao:
-  fim_treino: "2025-09-01 00:00:00"
-  inicio_avaliacao: "2025-10-01 00:00:00"
-  fim_avaliacao: "2026-03-01 00:00:00"
+  # Porcentagem dos dados usados para avaliação (0-100)
+  # O restante será automaticamente usado para treino
+  porcentagem_avaliacao: 20
 
 treinamento:
   # Quantidade total de tentativas no modo treino

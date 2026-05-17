@@ -87,7 +87,7 @@
       return `${formatarDataBr(inicio)} até ${formatarDataBr(fim)}`;
     }
 
-    function filtrarUltimos3Anos(datas, valores) {
+    function filtrarUltimosDias(datas, valores, quantidadeDias = 30) {
       if (!Array.isArray(datas) || !Array.isArray(valores)) {
         return { datas: [], valores: [] };
       }
@@ -108,12 +108,13 @@
         return { datas: [], valores: [] };
       }
 
-      const dataLimite = new Date(paresValidos[paresValidos.length - 1].data);
-      dataLimite.setFullYear(dataLimite.getFullYear() - 3);
+      const ultimaData = new Date(paresValidos[paresValidos.length - 1].data);
+      const dataLimite = new Date(ultimaData);
+      dataLimite.setDate(dataLimite.getDate() - quantidadeDias);
 
       const filtrados = paresValidos.filter((item) => item.data >= dataLimite);
       return {
-        datas: filtrados.map((item) => item.data.toISOString().slice(0, 10)),
+        datas: filtrados.map((item) => item.data.toISOString()),
         valores: filtrados.map((item) => item.valor),
       };
     }
@@ -228,14 +229,36 @@
       });
     }
 
+    function criarEixoXTemporal() {
+      return {
+        type: "date",
+        tickformat: "%d/%m\n%H:%M",
+        hoverformat: "%d/%m/%Y %H:%M",
+        nticks: 8,
+        rangeslider: { visible: true },
+        rangeselector: {
+          buttons: [
+            { count: 1, label: "1d", step: "day", stepmode: "backward" },
+            { count: 7, label: "7d", step: "day", stepmode: "backward" },
+            { count: 30, label: "30d", step: "day", stepmode: "backward" },
+            { step: "all", label: "Tudo" }
+          ]
+        }
+      };
+    }
+
     function criarLayoutGrafico(titulo, opcoesExtras = {}) {
       return {
         title: titulo,
-        height: 240,
+        height: 320,
         paper_bgcolor: "#1d2025",
         plot_bgcolor: "#1d2025",
         font: { color: "#e0e2e9" },
-        margin: { l: 35, r: 20, t: 45, b: 35 },
+        margin: { l: 55, r: 20, t: 45, b: 55 },
+        legend: {
+          orientation: "h",
+          y: -0.25
+        },
         ...opcoesExtras,
       };
     }
@@ -268,7 +291,7 @@
       });
     }
 
-    function montarTraceSerie(nome, serie, modo = "lines+markers") {
+    function montarTraceSerie(nome, serie, modo = "lines") {
       const datas = serie && Array.isArray(serie.datas) ? serie.datas : [];
       const valores = serie && Array.isArray(serie.valores) ? serie.valores : [];
       const tamanho = Math.min(datas.length, valores.length);
@@ -288,6 +311,88 @@
         name: nome,
         type: "scatter",
         mode: modo,
+        hovertemplate: "%{x|%d/%m/%Y %H:%M}<br>%{y}<extra>%{fullData.name}</extra>",
+      };
+    }
+
+    function montarTraceBarra(nome, serie) {
+      const datas = serie && Array.isArray(serie.datas) ? serie.datas : [];
+      const valores = serie && Array.isArray(serie.valores) ? serie.valores : [];
+      const tamanho = Math.min(datas.length, valores.length);
+
+      if (tamanho === 0) {
+        registrarLogPainel("warn", `Série sem dados para gráfico de barras: ${nome}`, {
+          possuiSerie: Boolean(serie),
+          tamanhoDatas: datas.length,
+          tamanhoValores: valores.length,
+        });
+        return null;
+      }
+
+      return {
+        x: datas.slice(0, tamanho),
+        y: valores.slice(0, tamanho),
+        name: nome,
+        type: "bar",
+        hovertemplate: "%{x|%d/%m/%Y %H:%M}<br>%{y}<extra>%{fullData.name}</extra>",
+      };
+    }
+
+    function agruparSeriePorDia(datas, valores, estrategia = "ultimo") {
+      if (!Array.isArray(datas) || !Array.isArray(valores)) {
+        return { datas: [], valores: [] };
+      }
+
+      const tamanho = Math.min(datas.length, valores.length);
+      const grupos = {};
+
+      for (let indice = 0; indice < tamanho; indice += 1) {
+        const data = new Date(datas[indice]);
+        const valor = Number(valores[indice]);
+
+        if (Number.isNaN(data.getTime()) || !Number.isFinite(valor)) {
+          continue;
+        }
+
+        const chaveDia = data.toISOString().slice(0, 10);
+
+        if (!grupos[chaveDia]) {
+          grupos[chaveDia] = {
+            datas: [],
+            valores: []
+          };
+        }
+
+        grupos[chaveDia].datas.push(data);
+        grupos[chaveDia].valores.push(valor);
+      }
+
+      const diasOrdenados = Object.keys(grupos).sort();
+      const datasAgrupadas = [];
+      const valoresAgrupados = [];
+
+      for (const dia of diasOrdenados) {
+        const grupo = grupos[dia];
+        let valorAgrupado;
+
+        if (estrategia === "ultimo") {
+          valorAgrupado = grupo.valores[grupo.valores.length - 1];
+        } else if (estrategia === "media") {
+          const soma = grupo.valores.reduce((acc, val) => acc + val, 0);
+          valorAgrupado = soma / grupo.valores.length;
+        } else if (estrategia === "soma") {
+          valorAgrupado = grupo.valores.reduce((acc, val) => acc + val, 0);
+        } else {
+          valorAgrupado = grupo.valores[grupo.valores.length - 1];
+        }
+
+        datasAgrupadas.push(dia);
+        valoresAgrupados.push(valorAgrupado);
+      }
+
+      return {
+        datas: datasAgrupadas,
+        valores: valoresAgrupados
       };
     }
 
@@ -400,15 +505,15 @@
       const melhores = obterListaMelhores(estado);
       const melhor = obterMelhorModelo(estado);
 
-      const treinoFiltrado = filtrarUltimos3Anos(treino.datas || [], treino.valores || []);
-      const avaliacaoFiltrada = filtrarUltimos3Anos(avaliacao.datas || [], avaliacao.valores || []);
+      const treinoFiltrado = filtrarUltimosDias(treino.datas || [], treino.valores || [], 30);
+      const avaliacaoFiltrada = filtrarUltimosDias(avaliacao.datas || [], avaliacao.valores || [], 30);
 
       const tracesTop5 = [
         montarTraceSerie("Treino", treinoFiltrado),
         montarTraceSerie("Avaliação real", avaliacaoFiltrada),
         ...melhores.slice(0, 5).map((item) => {
           try {
-            const previsao = filtrarUltimos3Anos(avaliacao.datas || [], item.previsoes || []);
+            const previsao = filtrarUltimosDias(avaliacao.datas || [], item.previsoes || [], 30);
             const parametros = Array.isArray(item.parametros) ? `(${item.parametros.join(",")})` : "";
             const erro = formatarNumero(item.erro, 4);
             return montarTraceSerie(`ARIMA${parametros} - erro ${erro}`, previsao);
@@ -426,17 +531,17 @@
         "grafico_top5",
         tracesTop5,
         criarLayoutGrafico("Comparação dos 5 melhores indivíduos", {
-          xaxis: { tickformat: "%d/%m/%Y", hoverformat: "%d/%m/%Y" },
+          xaxis: criarEixoXTemporal(),
+          yaxis: { title: "Valor da série / preço BTC" },
         }),
       );
 
       const tracesMelhor = [
-        montarTraceSerie("Treino", treinoFiltrado),
         montarTraceSerie("Avaliação real", avaliacaoFiltrada),
       ];
 
       if (melhor) {
-        const previsaoMelhor = filtrarUltimos3Anos(avaliacao.datas || [], melhor.previsoes || []);
+        const previsaoMelhor = filtrarUltimosDias(avaliacao.datas || [], melhor.previsoes || [], 30);
         const parametros = Array.isArray(melhor.parametros) ? `(${melhor.parametros.join(",")})` : "";
         tracesMelhor.push(montarTraceSerie(`Melhor ARIMA${parametros}`, previsaoMelhor));
       }
@@ -444,7 +549,7 @@
         "grafico_melhor_inner",
         tracesMelhor.filter(Boolean),
         criarLayoutGrafico("Melhor indivíduo atual", {
-          xaxis: { tickformat: "%d/%m/%Y", hoverformat: "%d/%m/%Y" },
+          xaxis: criarEixoXTemporal(),
         }),
       );
 
@@ -455,19 +560,18 @@
           avaliacao.valores || [],
           melhor.previsoes || [],
         );
-        const residuosFiltrados = filtrarUltimos3Anos(residuos.datas, residuos.valores);
+        const residuosFiltrados = filtrarUltimosDias(residuos.datas, residuos.valores, 2);
 
-        tracesResiduos.push(montarTraceSerie("Resíduo real - previsto", residuosFiltrados, "lines+markers"));
+        tracesResiduos.push(montarTraceBarra("Resíduo real - previsto", residuosFiltrados));
         tracesResiduos.push(criarLinhaZero(residuosFiltrados.datas));
       }
 
       renderizarGrafico(
         "grafico_residuos_inner",
         tracesResiduos.filter(Boolean),
-        criarLayoutGrafico("Resíduos do melhor modelo", {
-          xaxis: { tickformat: "%d/%m/%Y", hoverformat: "%d/%m/%Y" },
+        criarLayoutGrafico("Resíduos do melhor modelo - avaliação", {
+          xaxis: criarEixoXTemporal(),
           yaxis: { title: "Real - previsto" },
-          margin: { l: 45, r: 20, t: 45, b: 35 },
         }),
       );
 
@@ -505,6 +609,109 @@
       ELEMENTOS.logs.textContent = linhas.filter(Boolean).join("\n");
     }
 
+    // Funções para renderizar as novas seções de memória de parâmetros
+    function renderizarMemoriaParametros(estado) {
+      const memoria = estado.memoria_parametros || {};
+      const tbody = document.getElementById("memoria_tbody");
+      if (!tbody) return;
+
+      const linhas = [
+        ["Habilitada", memoria.habilitada ? "Sim" : "Não"],
+        ["Arquivo", memoria.arquivo || "-"],
+        ["Data memória anterior", memoria.data_memoria_anterior || "-"],
+        ["Parâmetros herdados testados", memoria.quantidade_herdados_testados || 0],
+        ["Destaques do dia", memoria.quantidade_destaques_dia || 0],
+        ["Consolidados 2 dias", memoria.quantidade_consolidados || 0]
+      ];
+
+      tbody.innerHTML = linhas.map(([chave, valor]) => `
+        <tr>
+          <td>${escaparHtml(chave)}</td>
+          <td>${escaparHtml(valor)}</td>
+        </tr>
+      `).join("");
+    }
+
+    function renderizarDestaquesDia(estado) {
+      const destaques = estado.destaques_dia || [];
+      const tbody = document.getElementById("destaques_tbody");
+      const mensagem = document.getElementById("mensagem_sem_destaques");
+      
+      if (!tbody) return;
+      
+      if (!destaques.length) {
+        tbody.innerHTML = `<tr><td colspan="6">Sem destaques do dia disponíveis.</td></tr>`;
+        if (mensagem) mensagem.style.display = "block";
+        return;
+      }
+      
+      if (mensagem) mensagem.style.display = "none";
+      
+      tbody.innerHTML = destaques.map((item) => `
+        <tr>
+          <td>${valorOuTraco(item.rank)}</td>
+          <td>${Array.isArray(item.parametros) ? `(${item.parametros.join(", ")})` : "-"}</td>
+          <td>${formatarNumero(item.smape)}</td>
+          <td>${formatarPercentual(item.mape)}</td>
+          <td>${formatarNumero(item.erro)}</td>
+          <td>${valorOuTraco(item.origem)}</td>
+        </tr>
+      `).join("");
+    }
+
+    function renderizarConsolidados2Dias(estado) {
+      const consolidados = estado.consolidados_2dias || [];
+      const tbody = document.getElementById("consolidados_tbody");
+      const mensagem = document.getElementById("mensagem_sem_consolidados");
+      
+      if (!tbody) return;
+      
+      if (!consolidados.length) {
+        tbody.innerHTML = `<tr><td colspan="7">Sem dados consolidados disponíveis. Eles aparecerão após a segunda execução diária.</td></tr>`;
+        if (mensagem) mensagem.style.display = "block";
+        return;
+      }
+      
+      if (mensagem) mensagem.style.display = "none";
+      
+      tbody.innerHTML = consolidados.map((item) => `
+        <tr>
+          <td>${valorOuTraco(item.rank)}</td>
+          <td>${Array.isArray(item.parametros) ? `(${item.parametros.join(", ")})` : "-"}</td>
+          <td>${formatarNumero(item.smape_anterior)}</td>
+          <td>${formatarNumero(item.smape_atual)}</td>
+          <td>${formatarNumero(item.smape_medio_2dias)}</td>
+          <td>${valorOuTraco(item.rank_anterior)}</td>
+          <td>${valorOuTraco(item.rank_atual)}</td>
+        </tr>
+      `).join("");
+    }
+
+    function renderizarCandidatosProximoDia(estado) {
+      const candidatos = estado.candidatos_proximo_dia || [];
+      const tbody = document.getElementById("candidatos_tbody");
+      const mensagem = document.getElementById("mensagem_sem_candidatos");
+      
+      if (!tbody) return;
+      
+      if (!candidatos.length) {
+        tbody.innerHTML = `<tr><td colspan="4">Sem candidatos para o próximo dia disponíveis.</td></tr>`;
+        if (mensagem) mensagem.style.display = "block";
+        return;
+      }
+      
+      if (mensagem) mensagem.style.display = "none";
+      
+      tbody.innerHTML = candidatos.map((item) => `
+        <tr>
+          <td>${Array.isArray(item.parametros) ? `(${item.parametros.join(", ")})` : "-"}</td>
+          <td>${valorOuTraco(item.origem)}</td>
+          <td>${formatarNumero(item.smape)}</td>
+          <td>${valorOuTraco(item.rank)}</td>
+        </tr>
+      `).join("");
+    }
+
     function renderizarEstadoSemTreino(estado) {
       preencherCardPrincipal(estado);
       ELEMENTOS.configuracaoLinhas.innerHTML = "";
@@ -539,6 +746,10 @@
         ["configuracao", () => preencherResumoEConfiguracao(estado)],
         ["tabela", () => preencherTabelaTop5(estado)],
         ["graficos", () => atualizarGraficos(estado)],
+        ["memoria", () => renderizarMemoriaParametros(estado)],
+        ["destaques", () => renderizarDestaquesDia(estado)],
+        ["consolidados", () => renderizarConsolidados2Dias(estado)],
+        ["candidatos", () => renderizarCandidatosProximoDia(estado)],
       ];
 
       etapas.forEach(([etapa, funcao]) => {

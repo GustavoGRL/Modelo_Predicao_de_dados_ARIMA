@@ -19,7 +19,7 @@ from werkzeug.exceptions import HTTPException
 RAIZ_PROJETO = Path(__file__).resolve().parents[2]
 
 CAMINHOS_CONFIGURACAO_PADRAO = (
-    RAIZ_PROJETO / "config" / "config.yaml",
+    RAIZ_PROJETO / "config" / "config.yami",
     RAIZ_PROJETO / "config" / "config.yml",
 )
 
@@ -30,11 +30,11 @@ ARQUIVO_HISTORICO_PADRAO = PASTA_SAIDA_PADRAO / "histórico_rodadas.csv"
 
 # Mantive o nome igual ao seu código.
 # Se o arquivo correto for "template_dashboard.html", altere aqui.
-ARQUIVO_HTML_DASHBOARD = Path(__file__).with_name("teamplate_dashboard.html")
+ARQUIVO_HTML_DASHBOARD = Path(__file__).with_name("template_dashboard.html")
 ARQUIVO_JS_DASHBOARD = Path(__file__).with_name("dashboard.js")
 
 PORTA_PADRAO = 8004
-HOST_PADRAO = "127.0.0.1"
+HOST_PADRAO = "0.0.0.0"
 
 CACHE_CONTROL_SEM_CACHE = "no-store, no-cache, must-revalidate, max-age=0"
 
@@ -78,7 +78,7 @@ def carregar_bloco_dashboard() -> dict[str, Any]:
     """
     Lê o bloco 'dashboard' do arquivo de configuração.
 
-    Se não existir config.yaml/config.yml, retorna configuração vazia
+    Se não existir config.yami/config.yml, retorna configuração vazia
     e o dashboard usa os caminhos padrão.
     """
     for caminho_configuracao in CAMINHOS_CONFIGURACAO_PADRAO:

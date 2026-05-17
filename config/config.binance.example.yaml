@@ -56,15 +56,15 @@ dados:
 divisao:
   # Porcentagem dos dados usados para avaliação (0-100)
   # O restante será automaticamente usado para treino
-  porcentagem_avaliacao: 3.33
+  porcentagem_avaliacao: 20
 
 treinamento:
   # Quantidade total de tentativas no modo treino
-  n_execucoes: 100
+  n_execucoes: 1000
   # Quantas tentativas serão executadas em paralelo por rodada
-  execucoes_por_rodada: 5
+  execucoes_por_rodada: 7
   # Quantos melhores resultados manter
-  top_k: 100
+  top_k: 30
   # Mantido por compatibilidade; a visualização acontece no Dash
   mostrar_graficos: false
   # Semente para reprodutibilidade (null desativa)
@@ -72,9 +72,9 @@ treinamento:
 
 modelo:
   tipo: "arima"
-  intervalo_p: [0, 45]
-  intervalo_d: [0, 4]
-  intervalo_q: [0, 45]
+  intervalo_p: [0, 30]
+  intervalo_d: [0, 2]
+  intervalo_q: [0, 30]
   max_tentativas: 40
 
 teste:

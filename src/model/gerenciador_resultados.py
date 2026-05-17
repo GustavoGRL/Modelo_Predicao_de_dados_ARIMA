@@ -1,5 +1,4 @@
 from datetime import datetime
-import csv
 import json
 from pathlib import Path
 from threading import Lock
@@ -7,19 +6,6 @@ from threading import Lock
 
 class GerenciadorResultados:
     """Centraliza a criação e atualização dos arquivos de saída do treinamento."""
-
-    CABECALHO_HISTORICO = [
-        "trend",
-        "rodada",
-        "testados",
-        "validos",
-        "falhas",
-        "melhor_erro_rodada",
-        "erro_medio_rodada",
-        "pior_erro_rodada",
-        "novo_melhor_geral",
-        "melhor_erro_geral",
-    ]
 
     def __init__(self, gerenciador_configuracao):
         self.gerenciador_configuracao = gerenciador_configuracao
@@ -35,8 +21,7 @@ class GerenciadorResultados:
         pasta_saida.mkdir(parents=True, exist_ok=True)
 
         caminho_estado = pasta_saida / "estado_treinamento.json"
-        caminho_historico = pasta_saida / "histórico_rodadas.csv"
-        return caminho_estado, caminho_historico
+        return caminho_estado
 
     @staticmethod
     def registrar_log(estado, mensagem):
@@ -56,6 +41,10 @@ class GerenciadorResultados:
     @staticmethod
     def _criar_resumo_periodos(treino, avaliacao):
         """Monta os metadados dos períodos usados no treinamento."""
+        total_registros = len(treino) + len(avaliacao)
+        porcentagem_treino = (len(treino) / total_registros) * 100 if total_registros > 0 else 0
+        porcentagem_avaliacao = (len(avaliacao) / total_registros) * 100 if total_registros > 0 else 0
+        
         return {
             "inicio_treino": str(treino.index.min()),
             "fim_treino": str(treino.index.max()),
@@ -63,6 +52,9 @@ class GerenciadorResultados:
             "fim_avaliacao": str(avaliacao.index.max()),
             "qtd_treino": int(len(treino)),
             "qtd_avaliacao": int(len(avaliacao)),
+            "porcentagem_treino": round(porcentagem_treino, 2),
+            "porcentagem_avaliacao": round(porcentagem_avaliacao, 2),
+            "total_registros": int(total_registros),
         }
 
     @staticmethod
@@ -88,6 +80,7 @@ class GerenciadorResultados:
         avaliacao,
         configuracao_treino,
         configuracao_modelo,
+        configuracao_divisao,
     ):
         """Cria a estrutura inicial do arquivo de estado consumido pelo view."""
         return {
@@ -105,6 +98,10 @@ class GerenciadorResultados:
                 configuracao_treino,
                 configuracao_modelo,
             ),
+            "configuracao_divisao": {
+                "porcentagem_treino": float(configuracao_divisao.get("porcentagem_treino", 80)),
+                "porcentagem_avaliacao": float(configuracao_divisao.get("porcentagem_avaliacao", 20)),
+            },
             "periodos": self._criar_resumo_periodos(treino, avaliacao),
             "treino": self._serializar_serie(treino),
             "avaliacao_real": self._serializar_serie(avaliacao),
@@ -123,38 +120,7 @@ class GerenciadorResultados:
                 encoding="utf-8",
             )
 
-    def inicializar_historico_csv(self, caminho_historico):
-        """Cria o arquivo CSV de histórico com o cabeçalho padrão."""
-        with self._monitoramento_lock:
-            with caminho_historico.open("w", newline="", encoding="utf-8") as arquivo:
-                writer = csv.writer(arquivo)
-                writer.writerow(self.CABECALHO_HISTORICO)
 
-    def anexar_historico_csv(
-        self,
-        caminho_historico,
-        nome_trend,
-        resumo_rodada,
-        melhor_erro_geral,
-    ):
-        """Anexa ao CSV o resumo consolidado da rodada recém-finalizada."""
-        with self._monitoramento_lock:
-            with caminho_historico.open("a", newline="", encoding="utf-8") as arquivo:
-                writer = csv.writer(arquivo)
-                writer.writerow(
-                    [
-                        nome_trend,
-                        resumo_rodada["rodada_atual"],
-                        resumo_rodada["testados"],
-                        resumo_rodada["validos"],
-                        resumo_rodada["falhas"],
-                        resumo_rodada["melhor_erro_rodada"],
-                        resumo_rodada["erro_medio_rodada"],
-                        resumo_rodada["pior_erro_rodada"],
-                        resumo_rodada["novo_melhor_geral"],
-                        melhor_erro_geral,
-                    ]
-                )
 
     @staticmethod
     def _criar_melhores_para_dashboard(melhores):

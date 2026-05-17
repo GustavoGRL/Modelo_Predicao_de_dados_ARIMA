@@ -106,6 +106,65 @@ class CarregadorDados:
             dados = cls.normalizar_nomes_colunas(dados)
         return dados
 
+    @classmethod
+    def carregar_dados_binance(
+        cls,
+        symbol="BTCUSDT",
+        interval="1h",
+        limit=720,
+        timeout=15,
+    ):
+        try:
+            import requests
+        except ImportError:
+            raise ImportError(
+                "A biblioteca 'requests' é necessária para buscar dados da Binance. "
+                "Instale com: pip install requests"
+            )
+
+        url = "https://api.binance.com/api/v3/klines"
+        
+        params = {
+            "symbol": symbol,
+            "interval": interval,
+            "limit": limit,
+        }
+        
+        resposta = requests.get(url, params=params, timeout=timeout)
+        resposta.raise_for_status()
+        
+        candles = resposta.json()
+        
+        colunas = [
+            "open_time",
+            "open",
+            "high",
+            "low",
+            "close",
+            "volume",
+            "close_time",
+            "quote_asset_volume",
+            "number_of_trades",
+            "taker_buy_base_asset_volume",
+            "taker_buy_quote_asset_volume",
+            "ignore",
+        ]
+        
+        df = pd.DataFrame(candles, columns=colunas)
+        
+        df["open_time"] = pd.to_datetime(df["open_time"], unit="ms", utc=True)
+        df["close"] = pd.to_numeric(df["close"], errors="coerce")
+        
+        df = (
+            df
+            .set_index("open_time")
+            .sort_index()
+        )
+        
+        df = df[["close"]].rename(columns={"close": "btc_close"})
+        
+        return df
+
 
 # Alias de compatibilidade para integrações existentes
 carregar_dados_trends = CarregadorDados.carregar_dados_csv_temporais

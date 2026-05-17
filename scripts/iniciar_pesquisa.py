@@ -1,9 +1,9 @@
+import argparse
 import json
 import subprocess
 import sys
 import time
 import traceback
-import webbrowser
 from pathlib import Path
 
 import yaml
@@ -15,12 +15,57 @@ if str(RAIZ_PROJETO) not in sys.path:
 from src.model.treino import GerenciadorTreinamento
 
 
+def configurar_argumentos():
+    """Configura os argumentos de linha de comando."""
+    parser = argparse.ArgumentParser(
+        description="Inicia o treinamento ARIMA com dashboard.",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog="""
+Exemplos:
+  python scripts/iniciar_pesquisa.py
+  python scripts/iniciar_pesquisa.py --config config/config.yami --modo treino
+  python scripts/iniciar_pesquisa.py --sem-dashboard
+        """,
+    )
+    
+    parser.add_argument(
+        "--config",
+        type=str,
+        default="config/config.yami",
+        help="Caminho para o arquivo de configuração (padrão: config/config.yami)",
+    )
+    
+    parser.add_argument(
+        "--modo",
+        type=str,
+        choices=["treino", "teste"],
+        default=None,
+        help="Modo de execução: treino ou teste (sobrescreve config)",
+    )
+    
+    parser.add_argument(
+        "--sem-dashboard",
+        action="store_true",
+        help="Não iniciar o dashboard automaticamente",
+    )
+    
+    return parser.parse_args()
+
+
 def resolver_raiz_projeto():
     return RAIZ_PROJETO
 
 
-def resolver_caminho_configuracao():
-    return (resolver_raiz_projeto() / "config" / "config.yami").resolve()
+def resolver_caminho_configuracao(caminho_config=None):
+    """Resolve o caminho para o arquivo de configuração."""
+    if caminho_config:
+        caminho = Path(caminho_config)
+        if caminho.is_absolute():
+            return caminho.resolve()
+        else:
+            return (RAIZ_PROJETO / caminho).resolve()
+    else:
+        return (RAIZ_PROJETO / "config" / "config.yami").resolve()
 
 
 def carregar_configuracao_execucao(caminho_configuracao):
@@ -86,16 +131,36 @@ def iniciar_visualizador(raiz_projeto, configuracao):
         cwd=str(raiz_projeto),
     )
     time.sleep(1.0)
-    webbrowser.open(f"http://127.0.0.1:{porta_visualizador}")
+    print(f"Dashboard disponível em: http://127.0.0.1:{porta_visualizador}")
 
 
 def main():
+    # Configurar argumentos
+    args = configurar_argumentos()
+    
+    # Resolver caminhos
     raiz_projeto = resolver_raiz_projeto()
-    caminho_configuracao = resolver_caminho_configuracao()
+    caminho_configuracao = resolver_caminho_configuracao(args.config)
+    
+    if not caminho_configuracao.exists():
+        print(f"Erro: Arquivo de configuração não encontrado: {caminho_configuracao}")
+        sys.exit(1)
+    
+    # Carregar configuração
     configuracao = carregar_configuracao_execucao(caminho_configuracao)
     configuracao_execucao = configuracao.get("execucao", {})
-    modo_execucao = str(configuracao_execucao.get("modo", "treino")).lower()
-    iniciar_dashboard = bool(configuracao_execucao.get("iniciar_dashboard_automaticamente", True))
+    
+    # Determinar modo de execução (argumento tem prioridade sobre config)
+    if args.modo:
+        modo_execucao = args.modo
+    else:
+        modo_execucao = str(configuracao_execucao.get("modo", "treino")).lower()
+    
+    # Determinar se deve iniciar dashboard
+    if args.sem_dashboard:
+        iniciar_dashboard = False
+    else:
+        iniciar_dashboard = bool(configuracao_execucao.get("iniciar_dashboard_automaticamente", True))
 
     if iniciar_dashboard:
         iniciar_visualizador(raiz_projeto=raiz_projeto, configuracao=configuracao)

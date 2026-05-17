@@ -6,7 +6,9 @@ Use este arquivo como referência principal:
 
 - `config/config.yami`
 
-O sistema atual utiliza somente fonte local de dados (`fonte_dados.tipo: local`).
+O sistema suporta duas fontes de dados:
+- `fonte_dados.tipo: local`: arquivo CSV local fornecido pelo usuário.
+- `fonte_dados.tipo: binance`: dados em tempo real da API da Binance (criptomoedas).
 
 ## Exemplo Completo
 ```yaml
@@ -34,6 +36,12 @@ dados_locais:
   delimitador: ","
   pular_linhas: 0
 
+dados_binance:
+  symbol: "BTCUSDT"
+  interval: "1h"
+  limit: 720
+  timeout: 15
+
 processamento:
   remover_duplicados: true
   estrategia_valores_faltantes: "remove"
@@ -44,9 +52,7 @@ dados:
     - pedicure
 
 divisao:
-  fim_treino: "2025-09-01 00:00:00"
-  inicio_avaliacao: "2025-10-01 00:00:00"
-  fim_avaliacao: "2026-03-01 00:00:00"
+  porcentagem_avaliacao: 20
 
 treinamento:
   n_execucoes: 1000
@@ -87,7 +93,9 @@ saida:
 - `caminho_historico`: CSV com evolução por rodada.
 
 ## `fonte_dados`
-- `tipo`: deve ser `local`.
+- `tipo`: fonte de dados para treinamento. Valores aceitos:
+  - `local`: arquivo CSV local fornecido pelo usuário.
+  - `binance`: dados em tempo real da API da Binance (criptomoedas).
 
 ## `dados_locais`
 - `caminho`: caminho do CSV relativo ao projeto.
@@ -100,6 +108,15 @@ Requisitos mínimos do arquivo:
 - 1 coluna temporal;
 - 1 ou mais colunas numéricas para previsão.
 
+## `dados_binance`
+Configuração para buscar dados da API da Binance:
+- `symbol`: par de moedas (ex.: `BTCUSDT`, `ETHUSDT`).
+- `interval`: intervalo de tempo dos candles. Valores aceitos: `1m`, `3m`, `5m`, `15m`, `30m`, `1h`, `2h`, `4h`, `6h`, `8h`, `12h`, `1d`, `3d`, `1w`, `1M`.
+- `limit`: quantidade de candles a buscar (máximo 1000).
+- `timeout`: timeout da requisição em segundos.
+
+Os dados da Binance são retornados como uma série temporal com a coluna `btc_close` (preço de fechamento).
+
 ## `processamento`
 - `remover_duplicados`: remove datas repetidas no índice temporal.
 - `estrategia_valores_faltantes`: `remove`, `fill_zero` ou `keep`.
@@ -111,11 +128,15 @@ Requisitos mínimos do arquivo:
 Se não informar, o sistema tenta usar todas as colunas de valor disponíveis.
 
 ## `divisao`
-- `fim_treino`: data final da janela de treino.
-- `inicio_avaliacao`: início da janela de avaliação.
-- `fim_avaliacao`: fim da janela de avaliação.
+- `porcentagem_avaliacao`: porcentagem dos dados usados para avaliação (0-100). O restante será automaticamente usado para treino.
 
-Treino e avaliação precisam resultar em séries não vazias.
+O sistema divide os dados sequencialmente:
+- Os primeiros registros (100% - `porcentagem_avaliacao`) são usados para treino.
+- Os últimos `porcentagem_avaliacao`% dos registros são usados para avaliação.
+
+Exemplo: com 1000 registros e `porcentagem_avaliacao: 20`:
+- Treino: 800 primeiros registros (80%).
+- Avaliação: 200 últimos registros (20%).
 
 ## `treinamento`
 - `n_execucoes`: total de simulações testadas.

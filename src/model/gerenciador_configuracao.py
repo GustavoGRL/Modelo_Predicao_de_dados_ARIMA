@@ -6,7 +6,7 @@ import yaml
 class GerenciadorConfiguracao:
     """Carrega, mescla e valida a configuração da aplicação."""
 
-    TIPOS_FONTE_VALIDOS = {"local"}
+    TIPOS_FONTE_VALIDOS = {"local", "binance"}
     CAMPOS_RAIZ_OBRIGATORIOS = ("fonte_dados", "treinamento", "modelo", "saida", "divisao")
 
     def __init__(self, caminho_configuracao):
@@ -23,6 +23,7 @@ class GerenciadorConfiguracao:
         self._validar_campos_raiz(configuracao)
         self._validar_bloco_treinamento(configuracao)
         self._validar_bloco_fonte_dados(configuracao)
+        self._validar_bloco_divisao(configuracao)
 
     def resolver_caminho(self, caminho_relativo):
         return str((self.raiz_projeto / caminho_relativo).resolve())
@@ -52,10 +53,37 @@ class GerenciadorConfiguracao:
         if tipo_fonte not in self.TIPOS_FONTE_VALIDOS:
             raise ValueError(
                 f"Campo inválido: fonte_dados.tipo = '{tipo_fonte}'. "
-                "Valor aceito: local."
+                "Valores aceitos: local, binance."
             )
 
-        self._validar_fonte_local(configuracao)
+        if tipo_fonte == "local":
+            self._validar_fonte_local(configuracao)
+        elif tipo_fonte == "binance":
+            self._validar_fonte_binance(configuracao)
+
+    @staticmethod
+    def _validar_bloco_divisao(configuracao):
+        """Valida a porcentagem de avaliação (o restante será usado para treino)."""
+        if "divisao" not in configuracao:
+            raise ValueError("Campo obrigatório ausente: 'divisao'.")
+
+        bloco_divisao = configuracao["divisao"]
+        
+        # Verificar se o campo de porcentagem de avaliação existe
+        if "porcentagem_avaliacao" not in bloco_divisao:
+            raise ValueError("Campo obrigatório ausente: divisao.porcentagem_avaliacao.")
+        
+        # Validar valor da porcentagem de avaliação
+        porcentagem_avaliacao = float(bloco_divisao["porcentagem_avaliacao"])
+        
+        if porcentagem_avaliacao <= 0 or porcentagem_avaliacao > 100:
+            raise ValueError("divisao.porcentagem_avaliacao deve estar entre 0 e 100.")
+        
+        # Verificar se a porcentagem de avaliação não ultrapassa 100%
+        if porcentagem_avaliacao > 100:
+            raise ValueError(
+                f"A porcentagem de avaliação ({porcentagem_avaliacao}%) não pode ultrapassar 100%."
+            )
 
     @staticmethod
     def _validar_fonte_local(configuracao):
@@ -72,6 +100,44 @@ class GerenciadorConfiguracao:
         tipo_arquivo = str(bloco_local.get("tipo_arquivo", "")).lower()
         if tipo_arquivo != "csv":
             raise ValueError("dados_locais.tipo_arquivo deve ser 'csv'.")
+
+    @staticmethod
+    def _validar_fonte_binance(configuracao):
+        if "dados_binance" not in configuracao:
+            raise ValueError(
+                "Campo obrigatório ausente: 'dados_binance' para fonte_dados.tipo = 'binance'."
+            )
+
+        bloco_binance = configuracao["dados_binance"]
+        
+        # Validar campos obrigatórios
+        symbol = bloco_binance.get("symbol")
+        if not symbol:
+            raise ValueError("Campo obrigatório ausente: dados_binance.symbol.")
+        
+        interval = bloco_binance.get("interval")
+        if not interval:
+            raise ValueError("Campo obrigatório ausente: dados_binance.interval.")
+        
+        limit = bloco_binance.get("limit")
+        if limit is None:
+            raise ValueError("Campo obrigatório ausente: dados_binance.limit.")
+        
+        # Validar valores
+        try:
+            limit_int = int(limit)
+            if limit_int <= 0:
+                raise ValueError("dados_binance.limit deve ser maior que 0.")
+        except (ValueError, TypeError):
+            raise ValueError("dados_binance.limit deve ser um número inteiro.")
+        
+        # Validar intervalos comuns da Binance
+        intervalos_validos = ["1m", "3m", "5m", "15m", "30m", "1h", "2h", "4h", "6h", "8h", "12h", "1d", "3d", "1w", "1M"]
+        if interval not in intervalos_validos:
+            raise ValueError(
+                f"Intervalo inválido: dados_binance.interval = '{interval}'. "
+                f"Valores aceitos: {', '.join(intervalos_validos)}"
+            )
 
     @staticmethod
     def _carregar_yaml(caminho_arquivo):

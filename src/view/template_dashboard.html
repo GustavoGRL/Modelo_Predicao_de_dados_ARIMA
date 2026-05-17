@@ -118,7 +118,7 @@
     }
 
     .chart-card {
-      min-height: 260px;
+      min-height: 380px;
       padding: 6px;
     }
 
@@ -186,7 +186,7 @@
     }
 
     .chart-inner {
-      min-height: 240px;
+      min-height: 320px;
     }
 
     .chart-frame {
@@ -349,7 +349,7 @@
         <article class="card">
           <p class="muted">MELHOR TAXA DE ERRO</p>
           <h2 id="melhor_erro_valor" class="value">-</h2>
-          <p class="sub">Menor é melhor</p>
+          <p class="sub">Resíduo Médio</p>
         </article>
 
         <article class="card">
@@ -420,6 +420,80 @@
           <h3 class="panel-title">Configuração de execução</h3>
           <div id="configuracao_linhas"></div>
         </article>
+      </section>
+
+      <section aria-labelledby="titulo-memoria">
+        <h2 id="titulo-memoria" class="section-heading">Memória de Parâmetros</h2>
+        <div class="table-wrapper">
+          <table id="tabela_memoria">
+            <thead>
+              <tr>
+                <th>Configuração</th>
+                <th>Valor</th>
+              </tr>
+            </thead>
+            <tbody id="memoria_tbody"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <section aria-labelledby="titulo-destaques">
+        <h2 id="titulo-destaques" class="section-heading">Destaques do Dia</h2>
+        <div class="table-wrapper">
+          <table id="tabela_destaques">
+            <thead>
+              <tr>
+                <th>Rank</th>
+                <th>Parâmetros</th>
+                <th>sMAPE</th>
+                <th>MAPE</th>
+                <th>Erro</th>
+                <th>Origem</th>
+              </tr>
+            </thead>
+            <tbody id="destaques_tbody"></tbody>
+          </table>
+        </div>
+        <p id="mensagem_sem_destaques" class="sub" style="display: none;">Sem destaques do dia disponíveis.</p>
+      </section>
+
+      <section aria-labelledby="titulo-consolidados">
+        <h2 id="titulo-consolidados" class="section-heading">Consolidados 2 Dias</h2>
+        <div class="table-wrapper">
+          <table id="tabela_consolidados">
+            <thead>
+              <tr>
+                <th>Rank</th>
+                <th>Parâmetros</th>
+                <th>sMAPE anterior</th>
+                <th>sMAPE atual</th>
+                <th>Média sMAPE 2 dias</th>
+                <th>Rank anterior</th>
+                <th>Rank atual</th>
+              </tr>
+            </thead>
+            <tbody id="consolidados_tbody"></tbody>
+          </table>
+        </div>
+        <p id="mensagem_sem_consolidados" class="sub" style="display: none;">Sem dados consolidados disponíveis. Eles aparecerão após a segunda execução diária.</p>
+      </section>
+
+      <section aria-labelledby="titulo-candidatos">
+        <h2 id="titulo-candidatos" class="section-heading">Candidatos para o Próximo Dia</h2>
+        <div class="table-wrapper">
+          <table id="tabela_candidatos">
+            <thead>
+              <tr>
+                <th>Parâmetros</th>
+                <th>Origem</th>
+                <th>sMAPE</th>
+                <th>Rank</th>
+              </tr>
+            </thead>
+            <tbody id="candidatos_tbody"></tbody>
+          </table>
+        </div>
+        <p id="mensagem_sem_candidatos" class="sub" style="display: none;">Sem candidatos para o próximo dia disponíveis.</p>
       </section>
 
       <section aria-labelledby="titulo-logs">
